@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meteor Dodge Game</title>
+    <style>
+        :root {
+        --orange: #ff6a1a;
+        --dark: #232323;
+        --light: #fff;
+    }
+    body {
+        margin: 0;
+        padding: 0;
+        font-family: 'Asimovian', Arial, sans-serif;
+        background: var(--dark);
+        color: var(--light);
+        min-height: 100vh;
+    }
+    .container {
+        max-width: 700px;
+        margin: 60px auto;
+        background: rgba(35, 35, 35, 0.92);
+        border-radius: 18px;
+        box-shadow: 0 8px 32px 0 rgba(0,0,0,0.37);
+        padding: 40px 32px 32px 32px;
+        text-align: center;
+    }
+    h1 {
+        font-family: 'Orbitron', Arial, sans-serif;
+        font-size: 2.8rem;
+        margin-bottom: 0.5rem;
+        letter-spacing: 2px;
+        color: var(--orange);
+        text-shadow: 0 2px 12px #000;
+    }
+    h2 {
+        font-family: 'Orbitron', Arial, sans-serif;
+        font-size: 1.5rem;
+        color: #ffb366;
+        margin-top: 0;
+        margin-bottom: 1.5rem;
+    }
+    .cta {
+        display: inline-block;
+        margin-top: 1.5rem;
+        padding: 0.7em 2em;
+        background: var(--orange);
+        color: var(--dark);
+        border-radius: 30px;
+        font-weight: bold;
+        font-size: 1.1rem;
+        text-decoration: none;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+        transition: background 0.2s, color 0.2s;
+        font-family: 'Asimovian', Arial, sans-serif; /* Ensure all buttons use Asimovian font */
+    }
+    .cta:hover {
+        background: #fff;
+        color: var(--orange);
+    }
+    @media (max-width: 600px) {
+        .container { padding: 20px 8px; }
+        h1 { font-size: 2rem; }
+    }
+    .asimovian-regular {
+        font-family: "Asimovian", sans-serif;
+        font-weight: 400;
+        font-style: normal;
+    }
+
+        canvas {
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+            border: none;
+            border-radius: 20px;
+            display: block;
+            margin: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="intro">
+        <h1>Welcome to Meteor Dodge!</h1>
+        <p>Use the left and right arrow keys or swipe left or right to move the rocket and dodge the meteors. Your score increases every time a meteor passes you. Good luck!</p>
+        <button class="cta" onclick="startGame()">Start Game</button>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+    <script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+canvas.style.display = 'none';
+
+let isGameRunning = true; // Flag to track game state
+let meteors = [];
+
+function startGame() {
+    isGameRunning = true;
+    document.getElementById('intro').style.display = 'none';
+    canvas.style.display = 'block';
+    meteors = []; // Reset meteors
+    rocket.x = canvas.width / 2 - rocket.width / 2; // Reset rocket position
+    gameLoop();
+}
+
+        const rocketImg = new Image();
+        rocketImg.src = 'game assets/rocket.png';
+
+        const background = new Image();
+        background.src = 'game assets/background.png';
+        
+        canvas.width = 900;
+canvas.height = 700;
+
+        
+
+        const meteorImg = new Image();
+        meteorImg.src = 'game assets/meteor.png';
+
+        const rocket = {
+            x: canvas.width / 2 - 25,
+            y: canvas.height - 100,
+            width: rocketImg.width,
+            height: rocketImg.height,
+            speed: 10
+        };
+
+        rocket.width = 60;
+rocket.height = 75;
+rocket.x = canvas.width / 2 - rocket.width / 2;
+rocket.y = canvas.height - rocket.height - 20;
+
+        let spawnInterval = 1000; // Initial spawn interval in milliseconds
+
+        function spawnMeteor() {
+            const size = 30 + Math.random() * 70; // Random size between 30 and 100
+            const meteor = {
+                x: Math.random() * (canvas.width - size),
+                y: Math.random() * -canvas.height,
+                width: size,
+                height: size,
+                speed: 3 + Math.random() * 2
+            };
+            meteors.push(meteor);
+        }
+
+        function adjustSpawnRate() {
+            spawnInterval = Math.max(200, 1000 - score * 10); // Decrease interval as score increases
+            clearInterval(spawnTimer);
+            spawnTimer = setInterval(spawnMeteor, spawnInterval);
+        }
+
+        let spawnTimer = setInterval(spawnMeteor, spawnInterval);
+        setInterval(adjustSpawnRate, 1000); // Adjust spawn rate every second
+
+        function drawRocket() {
+            ctx.drawImage(rocketImg, rocket.x, rocket.y, rocket.width, rocket.height);
+        }
+
+        function drawMeteors() {
+            meteors.forEach(meteor => {
+                ctx.drawImage(meteorImg, meteor.x, meteor.y, meteor.width, meteor.height);
+            });
+        }
+
+        let score = 0;
+
+function drawScore() {
+    ctx.font = '24px Orbitron';
+    ctx.fillStyle = 'white';
+    ctx.textAlign = 'left';
+    ctx.fillText(`Score: ${score}`, 20, 40);
+}
+
+        function endGame() {
+            isGameRunning = false; // Stop the game loop
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.font = '48px Orbitron';
+            ctx.fillStyle = 'white';
+            ctx.textAlign = 'center';
+            ctx.fillText('Game Over', canvas.width / 2, canvas.height / 2 - 50);
+
+            const buttonContainer = document.createElement('div');
+            buttonContainer.style.textAlign = 'center';
+            buttonContainer.style.marginTop = '20px';
+            buttonContainer.style.position = 'absolute';
+            buttonContainer.style.top = '50%';
+            buttonContainer.style.left = '50%';
+            buttonContainer.style.transform = 'translate(-50%, -50%)';
+
+            const playAgainButton = document.createElement('button');
+            playAgainButton.textContent = 'Play Again';
+            playAgainButton.className = 'cta';
+            playAgainButton.style.margin = '10px';
+            playAgainButton.onclick = () => {
+                score = 0; // Reset score
+                isGameRunning = true; // Restart the game loop
+                document.body.removeChild(buttonContainer);
+                startGame();
+            };
+
+            const mainPageButton = document.createElement('button');
+            mainPageButton.textContent = 'Return to Main Page';
+            mainPageButton.className = 'cta';
+            mainPageButton.style.margin = '10px';
+            mainPageButton.onclick = () => window.location.href = 'index.html';
+
+            const leaderboardButton = document.createElement('button');
+            leaderboardButton.textContent = 'See Leaderboard';
+            leaderboardButton.className = 'cta';
+            leaderboardButton.style.margin = '10px';
+            leaderboardButton.onclick = () => window.location.href = 'leaderboard.html';
+
+            buttonContainer.appendChild(playAgainButton);
+            buttonContainer.appendChild(mainPageButton);
+            buttonContainer.appendChild(leaderboardButton);
+
+            document.body.appendChild(buttonContainer);
+
+            const playerName = prompt('Enter your name:') || 'Anonymous';
+            const leaderboard = JSON.parse(localStorage.getItem('leaderboard')) || [];
+            leaderboard.push({ player: playerName, score });
+            leaderboard.sort((a, b) => b.score - a.score);
+            localStorage.setItem('leaderboard', JSON.stringify(leaderboard));
+        }
+
+        let speedMultiplier = 1; // Multiplier to increase meteor speed over time
+
+        function updateMeteors() {
+            meteors.forEach((meteor, index) => {
+                meteor.y += meteor.speed * speedMultiplier; // Apply speed multiplier
+                if (meteor.y > canvas.height) {
+                    meteors.splice(index, 1);
+                    score += 1; // Increase score when a meteor passes
+                }
+
+                // Collision detection
+                if (
+                    rocket.x < meteor.x + meteor.width &&
+                    rocket.x + rocket.width > meteor.x &&
+                    rocket.y < meteor.y + meteor.height &&
+                    rocket.y + rocket.height > meteor.y
+                ) {
+                    endGame();
+                    return;
+                }
+            });
+
+            // Gradually increase speed multiplier as score increases
+            speedMultiplier = 1 + score / 50;
+        }
+
+        function moveRocket() {
+            if (keys.ArrowLeft && rocket.x > 0) {
+                rocket.x -= rocket.speed;
+            }
+            if (keys.ArrowRight && rocket.x < canvas.width - rocket.width) {
+                rocket.x += rocket.speed;
+            }
+        }
+
+        const keys = {};
+        window.addEventListener('keydown', e => {
+            keys[e.key] = true;
+        });
+        window.addEventListener('keyup', e => {
+            keys[e.key] = false;
+        });
+
+        let touchStartX = null;
+        let touchEndX = null;
+
+        canvas.addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            touchEndX = e.touches[0].clientX;
+            if (touchStartX && touchEndX) {
+                const deltaX = touchEndX - touchStartX;
+                if (deltaX > 0 && rocket.x < canvas.width - rocket.width) {
+                    rocket.x += rocket.speed;
+                } else if (deltaX < 0 && rocket.x > 0) {
+                    rocket.x -= rocket.speed;
+                }
+                touchStartX = touchEndX; // Update start position for smoother movement
+            }
+        });
+
+        function drawBackground() {
+    ctx.fillStyle = 'black';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    stars.forEach(star => {
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+        ctx.fill();
+    });
+}
+
+        let stars = Array.from({ length: 100 }, () => ({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            radius: Math.random() * 2
+        }));
+
+        function gameLoop() {
+            if (!isGameRunning) return; // Stop the loop if the game is over
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawBackground();
+            drawRocket();
+            drawMeteors();
+            drawScore();
+            updateMeteors();
+            moveRocket();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        setInterval(spawnMeteor, 1000);
+        gameLoop();
+    </script>
+</body>
+</html>
