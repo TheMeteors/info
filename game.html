@@ -13,7 +13,7 @@
     body {
         margin: 0;
         padding: 0;
-        font-family: 'Asimovian', Arial, sans-serif;
+        font-family: 'Asimovian', 'Asimovian', sans-serif;
         background: var(--dark);
         color: var(--light);
         min-height: 100vh;
@@ -27,8 +27,11 @@
         padding: 40px 32px 32px 32px;
         text-align: center;
     }
+    h1, h2 {
+            font-family: 'Orbitron', 'Orbitron', sans-serif; /* Ensure titles use Orbitron font */
+        }
+
     h1 {
-        font-family: 'Orbitron', Arial, sans-serif;
         font-size: 2.8rem;
         margin-bottom: 0.5rem;
         letter-spacing: 2px;
@@ -36,7 +39,6 @@
         text-shadow: 0 2px 12px #000;
     }
     h2 {
-        font-family: 'Orbitron', Arial, sans-serif;
         font-size: 1.5rem;
         color: #ffb366;
         margin-top: 0;
@@ -54,7 +56,7 @@
         text-decoration: none;
         box-shadow: 0 2px 8px rgba(0,0,0,0.18);
         transition: background 0.2s, color 0.2s;
-        font-family: 'Asimovian', Arial, sans-serif; /* Ensure all buttons use Asimovian font */
+        font-family: 'Asimovian', 'Asimovian', sans-serif; /* Ensure buttons use Asimovian font */
     }
     .cta:hover {
         background: #fff;
