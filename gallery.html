@@ -63,42 +63,13 @@
     <div class="container">
         <h1>Gallery</h1>
         <div class="gallery">
-            <!-- Images will be loaded here dynamically -->
+            <img src="gallery/1.jpg" alt="Image 1">
+            <img src="gallery/2.jpg" alt="Image 2">
+            <img src="gallery/3.jpg" alt="Image 3">
+            <img src="gallery/4.jpg" alt="Image 4">
+            <img src="gallery/5.jpg" alt="Image 5">
         </div>
         <a href="index.html" class="cta" style="display: inline-block; margin-top: 20px;">Back to Home</a>
     </div>
-
-    <script>
-        // Dynamically load images from the gallery folder
-        async function loadGallery() {
-            const galleryContainer = document.querySelector('.gallery');
-
-            try {
-                const response = await fetch('gallery/'); // Fetch the gallery folder
-                if (!response.ok) {
-                    throw new Error('Unable to fetch gallery folder');
-                }
-
-                const text = await response.text();
-                const parser = new DOMParser();
-                const htmlDocument = parser.parseFromString(text, 'text/html');
-                const links = htmlDocument.querySelectorAll('a');
-
-                links.forEach(link => {
-                    const href = link.getAttribute('href');
-                    if (href.match(/\.(jpg|jpeg|png|gif)$/i)) { // Match image files
-                        const img = document.createElement('img');
-                        img.src = `gallery/${href}`;
-                        img.alt = href;
-                        galleryContainer.appendChild(img);
-                    }
-                });
-            } catch (error) {
-                console.error('Error loading gallery:', error);
-            }
-        }
-
-        loadGallery();
-    </script>
 </body>
 </html>
