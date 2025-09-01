@@ -101,14 +101,9 @@
         });
 
         function clearLeaderboard() {
-            const password = prompt('Enter the password to clear the leaderboard:');
-            if (password === 'meteors12845') {
-                localStorage.removeItem('leaderboard');
-                document.getElementById('leaderboard-body').innerHTML = '';
-                alert('Leaderboard cleared successfully!');
-            } else {
-                alert('Incorrect password. Leaderboard not cleared.');
-            }
+            localStorage.removeItem('leaderboard');
+            document.getElementById('leaderboard-body').innerHTML = '';
+            alert('Leaderboard cleared successfully!');
         }
     </script>
     <footer>

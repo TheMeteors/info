@@ -85,7 +85,7 @@
 <body>
     <div class="container" id="intro">
         <h1>Welcome to Meteor Dodge!</h1>
-        <p>Use the left and right arrow keys or swipe left or right to move the rocket and dodge the meteors. Your score increases every time a meteor passes you. Good luck!</p>
+        <p>Use the left and right arrow keys to move the rocket and dodge the meteors. Press the spacebar to shoot lasers and destroy meteors. Your score increases every time you destroy a meteor or successfully dodge one. Good luck!</p>
         <button class="cta" onclick="startGame()">Start Game</button>
     </div>
 
@@ -105,6 +105,12 @@ function startGame() {
     canvas.style.display = 'block';
     meteors = []; // Reset meteors
     rocket.x = canvas.width / 2 - rocket.width / 2; // Reset rocket position
+    // Ensure we only create one spawn timer
+    if (!spawnTimer) {
+        spawnTimer = setInterval(spawnMeteor, spawnInterval); // Start spawning meteors
+    }
+    // Spawn an initial meteor immediately so the player sees activity right away
+    spawnMeteor();
     gameLoop();
 }
 
@@ -138,6 +144,9 @@ rocket.y = canvas.height - rocket.height - 20;
         let spawnInterval = 1000; // Initial spawn interval in milliseconds
 
         function spawnMeteor() {
+            // Do not spawn regular meteors while the massive meteor event is active
+            if (massiveMeteorActive) return;
+
             const size = 30 + Math.random() * 70; // Random size between 30 and 100
             const meteor = {
                 x: Math.random() * (canvas.width - size),
@@ -151,11 +160,15 @@ rocket.y = canvas.height - rocket.height - 20;
 
         function adjustSpawnRate() {
             spawnInterval = Math.max(200, 1000 - score * 10); // Decrease interval as score increases
-            clearInterval(spawnTimer);
-            spawnTimer = setInterval(spawnMeteor, spawnInterval);
+            // Only update the timer if it already exists (prevents accidental clears when not running)
+            if (spawnTimer) {
+                clearInterval(spawnTimer);
+                spawnTimer = setInterval(spawnMeteor, spawnInterval);
+            }
         }
 
-        let spawnTimer = setInterval(spawnMeteor, spawnInterval);
+        // Start without a spawn timer; it will be created when the player clicks Start
+        let spawnTimer = null;
         setInterval(adjustSpawnRate, 1000); // Adjust spawn rate every second
 
         function drawRocket() {
@@ -199,7 +212,19 @@ function drawScore() {
             playAgainButton.style.margin = '10px';
             playAgainButton.onclick = () => {
                 score = 0; // Reset score
+                meteors = []; // Clear all meteors
+                massiveMeteor = null; // Clear the massive meteor if active
+                massiveMeteorActive = false; // Reset the massive meteor flag
+                massiveMeteorHits = 0; // Reset massive meteor hit count
                 isGameRunning = true; // Restart the game loop
+                rocket.x = canvas.width / 2 - rocket.width / 2; // Reset rocket position to center
+                rocket.y = canvas.height - rocket.height - 20; // Reset rocket position vertically
+                Object.keys(keys).forEach(key => keys[key] = false); // Clear all key states
+                spawnInterval = 1000; // Reset spawn interval to initial value
+                try { if (spawnTimer) { clearInterval(spawnTimer); spawnTimer = null; } } catch(e) {}
+                if (!spawnTimer) spawnTimer = setInterval(spawnMeteor, spawnInterval);
+                // spawn one meteor immediately after restart so the player sees activity
+                spawnMeteor();
                 document.body.removeChild(buttonContainer);
                 startGame();
             };
@@ -232,28 +257,32 @@ function drawScore() {
         let speedMultiplier = 1; // Multiplier to increase meteor speed over time
 
         function updateMeteors() {
-            meteors.forEach((meteor, index) => {
-                meteor.y += meteor.speed * speedMultiplier; // Apply speed multiplier
-                if (meteor.y > canvas.height) {
-                    meteors.splice(index, 1);
-                    score += 1; // Increase score when a meteor passes
-                }
+            if (!massiveMeteorActive && score > 0 && score % 50 === 0) {
+        spawnMassiveMeteor();
+    }
 
-                // Collision detection
-                if (
-                    rocket.x < meteor.x + meteor.width &&
-                    rocket.x + rocket.width > meteor.x &&
-                    rocket.y < meteor.y + meteor.height &&
-                    rocket.y + rocket.height > meteor.y
-                ) {
-                    endGame();
-                    return;
-                }
-            });
-
-            // Gradually increase speed multiplier as score increases
-            speedMultiplier = 1 + score / 50;
+    meteors.forEach((meteor, index) => {
+        meteor.y += meteor.speed * speedMultiplier; // Apply speed multiplier
+        if (meteor.y > canvas.height) {
+            meteors.splice(index, 1);
+            score += 1; // Increase score when a meteor passes
         }
+
+        // Collision detection
+        if (
+            rocket.x < meteor.x + meteor.width &&
+            rocket.x + rocket.width > meteor.x &&
+            rocket.y < meteor.y + meteor.height &&
+            rocket.y + rocket.height > meteor.y
+        ) {
+            endGame();
+            return;
+        }
+    });
+
+    // Gradually increase speed multiplier as score increases
+    speedMultiplier = 1 + score / 50;
+}
 
         function moveRocket() {
             if (keys.ArrowLeft && rocket.x > 0) {
@@ -270,26 +299,6 @@ function drawScore() {
         });
         window.addEventListener('keyup', e => {
             keys[e.key] = false;
-        });
-
-        let touchStartX = null;
-        let touchEndX = null;
-
-        canvas.addEventListener('touchstart', (e) => {
-            touchStartX = e.touches[0].clientX;
-        });
-
-        canvas.addEventListener('touchmove', (e) => {
-            touchEndX = e.touches[0].clientX;
-            if (touchStartX && touchEndX) {
-                const deltaX = touchEndX - touchStartX;
-                if (deltaX > 0 && rocket.x < canvas.width - rocket.width) {
-                    rocket.x += rocket.speed;
-                } else if (deltaX < 0 && rocket.x > 0) {
-                    rocket.x -= rocket.speed;
-                }
-                touchStartX = touchEndX; // Update start position for smoother movement
-            }
         });
 
         function drawBackground() {
@@ -309,22 +318,206 @@ function drawScore() {
             radius: Math.random() * 2
         }));
 
-        function gameLoop() {
-            if (!isGameRunning) return; // Stop the loop if the game is over
+        let massiveMeteor = null; // Object to represent the massive meteor
+let massiveMeteorActive = false; // Flag to track if the massive meteor event is active
+let massiveMeteorHitsRequired = 10; // Initial hits required to destroy the massive meteor
 
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            drawBackground();
-            drawRocket();
-            drawMeteors();
-            drawScore();
-            updateMeteors();
-            moveRocket();
+function spawnMassiveMeteor() {
+    // Determine meteor image aspect ratio (use natural sizes if available)
+    let imgW = meteorImg.naturalWidth || meteorImg.width || 1;
+    let imgH = meteorImg.naturalHeight || meteorImg.height || 1;
+    const canvasRatio = canvas.width / canvas.height;
+    const imgRatio = imgW / imgH;
 
-            requestAnimationFrame(gameLoop);
+    let width, height;
+    // Fit the meteor to the canvas without stretching: cover the canvas while preserving aspect ratio
+    if (imgRatio > canvasRatio) {
+        // image is wider than canvas ratio -> match height
+        height = canvas.height;
+        width = height * imgRatio;
+    } else {
+        // image is taller (or equal) -> match width
+        width = canvas.width;
+        height = width / imgRatio;
+    }
+
+    massiveMeteor = {
+        x: (canvas.width - width) / 2, // center horizontally
+        y: -height, // start above the canvas by its height
+        width,
+        height,
+        speed: 1 // Very slow speed for dramatic effect
+    };
+    massiveMeteorActive = true;
+    // Pause regular meteor spawning while the massive meteor is active
+    try { if (spawnTimer) { clearInterval(spawnTimer); spawnTimer = null; } } catch (e) {}
+}
+
+function drawMassiveMeteor() {
+    if (massiveMeteor) {
+        ctx.drawImage(
+            meteorImg, // Use the regular meteor texture
+            massiveMeteor.x,
+            massiveMeteor.y,
+            massiveMeteor.width,
+            massiveMeteor.height
+        );
+    }
+}
+
+function updateMassiveMeteor() {
+    if (massiveMeteor) {
+        massiveMeteor.y += massiveMeteor.speed;
+
+        // Check for collision with the rocket
+        if (
+            rocket.x < massiveMeteor.x + massiveMeteor.width &&
+            rocket.x + rocket.width > massiveMeteor.x &&
+            rocket.y < massiveMeteor.y + massiveMeteor.height &&
+            rocket.y + rocket.height > massiveMeteor.y
+        ) {
+            endGame();
+            return;
         }
 
-        setInterval(spawnMeteor, 1000);
-        gameLoop();
+        // If the massive meteor leaves the screen, resume regular meteors
+        if (massiveMeteor.y > canvas.height) {
+            massiveMeteor = null;
+            massiveMeteorActive = false;
+            spawnTimer = setInterval(spawnMeteor, spawnInterval); // Resume regular meteor spawning
+        }
+    }
+}
+
+let laser = null; // Object to represent the laser
+let massiveMeteorHits = 0; // Track hits on the massive meteor
+
+// Updated the `shootLaser` function to allow firing the laser at any time.
+function shootLaser() {
+    if (!laser) {
+        laser = {
+            x: rocket.x + rocket.width / 2 - 2, // Center the laser on the rocket
+            y: rocket.y,
+            width: 4,
+            height: 20,
+            speed: 35 // Increased speed
+        };
+    }
+}
+
+function drawLaser() {
+    if (laser) {
+        ctx.fillStyle = 'orange'; // Updated laser color to orange
+        ctx.fillRect(laser.x, laser.y, laser.width, laser.height);
+    }
+}
+
+// Ensure a point is awarded for every meteor destroyed and prevent spacebar scrolling.
+function updateLaser() {
+    if (laser) {
+        laser.y -= laser.speed;
+
+        // Check if the laser hits the massive meteor
+        if (
+            massiveMeteor &&
+            laser.x < massiveMeteor.x + massiveMeteor.width &&
+            laser.x + laser.width > massiveMeteor.x &&
+            laser.y < massiveMeteor.y + massiveMeteor.height &&
+            laser.y + laser.height > massiveMeteor.y
+        ) {
+            // Process hit
+            massiveMeteorHits += 1;
+            // remove laser immediately to avoid it being tested again
+            laser = null;
+
+            // If we've reached the required hits, destroy the massive meteor in a safe, atomic step
+            if (massiveMeteorHits >= massiveMeteorHitsRequired) {
+                massiveMeteorHits = 0; // reset counter first
+                massiveMeteorActive = false;
+                massiveMeteor = null; // clear object so other code stops referencing it
+                massiveMeteorHitsRequired *= 2; // schedule increased difficulty
+
+                // safely restart spawn timer
+                try {
+                    if (spawnTimer) {
+                        clearInterval(spawnTimer);
+                        spawnTimer = null;
+                    }
+                } catch (e) {
+                    // ignore timer errors
+                }
+                // Resume spawning after a short delay to let other updates settle
+                setTimeout(() => {
+                    if (!spawnTimer) spawnTimer = setInterval(spawnMeteor, spawnInterval);
+                }, 50);
+
+                score += 25; // Award 25 points for destroying the massive meteor
+            }
+        }
+
+    // If laser was cleared while handling the massive meteor, stop to avoid null access
+    if (!laser) return;
+
+    // Check if the laser hits any regular meteor
+        for (let i = 0; i < meteors.length; i++) {
+            const meteor = meteors[i];
+            if (
+                laser.x < meteor.x + meteor.width &&
+                laser.x + laser.width > meteor.x &&
+                laser.y < meteor.y + meteor.height &&
+                laser.y + laser.height > meteor.y
+            ) {
+                meteors.splice(i, 1); // Remove the meteor
+                score += 1; // Award a point for destroying the meteor
+                laser = null; // Remove the laser after a hit
+                break; // Exit the loop after a hit
+            }
+        }
+
+        // Remove the laser if it goes off-screen
+        if (laser && laser.y + laser.height < 0) {
+            laser = null;
+        }
+    }
+}
+
+// Prevent the spacebar from scrolling the webpage
+window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space') {
+        e.preventDefault(); // Prevent default scrolling behavior
+        shootLaser();
+    }
+});
+
+// Update the game loop to include the laser
+function gameLoop() {
+    if (!isGameRunning) return;
+    try {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawBackground();
+        drawRocket();
+        drawMeteors();
+        drawMassiveMeteor(); // Draw the massive meteor if active
+        drawLaser(); // Draw the laser if active
+        drawScore();
+        updateMeteors();
+        updateMassiveMeteor(); // Update the massive meteor if active
+        updateLaser(); // Update the laser if active
+        moveRocket();
+    } catch (err) {
+        // If something unexpected happens, stop the game loop safely and report to console
+        console.error('Game loop error:', err);
+        isGameRunning = false;
+        return;
+    }
+
+    requestAnimationFrame(gameLoop);
+}
+
+// Added a block for mobile devices
+if (/Mobi|Android/i.test(navigator.userAgent)) {
+    document.body.innerHTML = '<h1 style="color: red; text-align: center; margin-top: 20%;">This game is not compatible with mobile devices. Please use a desktop browser.</h1>';
+}
     </script>
 
     <footer style="text-align: center; margin-top: 40px; font-family: 'Asimovian', Arial, sans-serif; color: var(--light);">
