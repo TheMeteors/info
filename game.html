@@ -109,6 +109,10 @@ function startGame() {
     if (!spawnTimer) {
         spawnTimer = setInterval(spawnMeteor, spawnInterval); // Start spawning meteors
     }
+    // try to play background music
+    safePlay(bgMusic);
+    // hide mouse cursor over the canvas while playing
+    try { canvas.style.cursor = 'none'; } catch (e) {}
     // Spawn an initial meteor immediately so the player sees activity right away
     spawnMeteor();
     gameLoop();
@@ -127,6 +131,30 @@ canvas.height = 700;
 
         const meteorImg = new Image();
         meteorImg.src = 'game assets/meteor.png';
+
+        // Audio assets
+    const bgMusic = new Audio('game assets/background_music.mp3');
+    bgMusic.loop = true;
+    const laserSound = new Audio('game assets/laserSound.wav');
+    const meteorBlowUp = new Audio('game assets/meteorBlowUp.wav');
+    const bigMeteorBlowUp = new Audio('game assets/bigMeteorBlowUp.mp3');
+    const gameOverSound = new Audio('game assets/gameOver.wav');
+    const rocketThrust = new Audio('game assets/rocketThrust.wav');
+    rocketThrust.loop = true;
+    // Separate looped thrust sound specifically for the massive meteor event (mp3 as requested)
+    const rocketThrustLoop = new Audio('game assets/rocketThrust.mp3');
+    rocketThrustLoop.loop = true;
+
+        function safePlay(audio, restart = true) {
+            if (!audio) return;
+            try {
+                if (restart) audio.currentTime = 0;
+                const p = audio.play();
+                if (p && p.catch) p.catch(() => {});
+            } catch (e) {
+                // ignore play errors (autoplay restrictions, etc.)
+            }
+        }
 
         const rocket = {
             x: canvas.width / 2 - 25,
@@ -183,6 +211,35 @@ rocket.y = canvas.height - rocket.height - 20;
 
         let score = 0;
 
+        let gameWon = false; // flag to prevent repeated win handling
+
+        function checkWin() {
+            if (gameWon) return;
+            if (score >= 200) {
+                gameWon = true;
+                // Stop game actions
+                isGameRunning = false;
+                try { if (spawnTimer) { clearInterval(spawnTimer); spawnTimer = null; } } catch (e) {}
+                // stop sounds
+                try { bgMusic.pause(); bgMusic.currentTime = 0; } catch (e) {}
+                try { rocketThrust.pause(); rocketThrust.currentTime = 0; } catch (e) {}
+                try { rocketThrustLoop.pause(); rocketThrustLoop.currentTime = 0; } catch (e) {}
+                try { laserSound.pause(); laserSound.currentTime = 0; } catch (e) {}
+                try { meteorBlowUp.pause(); meteorBlowUp.currentTime = 0; } catch (e) {}
+                try { bigMeteorBlowUp.pause(); bigMeteorBlowUp.currentTime = 0; } catch (e) {}
+
+                // display win message
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.font = '40px Orbitron';
+                ctx.fillStyle = 'white';
+                ctx.textAlign = 'center';
+                ctx.fillText('You beat the game', canvas.width / 2, canvas.height / 2 - 20);
+                ctx.font = '20px Orbitron';
+                ctx.fillText('(for now — will be updates)', canvas.width / 2, canvas.height / 2 + 20);
+                try { canvas.style.cursor = 'auto'; } catch(e) {}
+            }
+        }
+
 function drawScore() {
     ctx.font = '24px Orbitron';
     ctx.fillStyle = 'white';
@@ -192,11 +249,20 @@ function drawScore() {
 
         function endGame() {
             isGameRunning = false; // Stop the game loop
+            // Stop all audio and play game over sound
+            try { bgMusic.pause(); bgMusic.currentTime = 0; } catch(e) {}
+            try { rocketThrust.pause(); rocketThrust.currentTime = 0; } catch(e) {}
+            try { rocketThrustLoop.pause(); rocketThrustLoop.currentTime = 0; } catch(e) {}
+            try { laserSound.pause(); laserSound.currentTime = 0; } catch(e) {}
+            try { meteorBlowUp.pause(); meteorBlowUp.currentTime = 0; } catch(e) {}
+            try { bigMeteorBlowUp.pause(); bigMeteorBlowUp.currentTime = 0; } catch(e) {}
+            try { safePlay(gameOverSound); } catch(e) {}
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.font = '48px Orbitron';
             ctx.fillStyle = 'white';
             ctx.textAlign = 'center';
             ctx.fillText('Game Over', canvas.width / 2, canvas.height / 2 - 50);
+            try { canvas.style.cursor = 'auto'; } catch(e) {}
 
             const buttonContainer = document.createElement('div');
             buttonContainer.style.textAlign = 'center';
@@ -252,6 +318,8 @@ function drawScore() {
             leaderboard.push({ player: playerName, score });
             leaderboard.sort((a, b) => b.score - a.score);
             localStorage.setItem('leaderboard', JSON.stringify(leaderboard));
+            try { bgMusic.pause(); bgMusic.currentTime = 0; } catch(e) {}
+            try { rocketThrust.pause(); rocketThrust.currentTime = 0; } catch(e) {}
         }
 
         let speedMultiplier = 1; // Multiplier to increase meteor speed over time
@@ -266,6 +334,7 @@ function drawScore() {
         if (meteor.y > canvas.height) {
             meteors.splice(index, 1);
             score += 1; // Increase score when a meteor passes
+            checkWin();
         }
 
         // Collision detection
@@ -285,12 +354,20 @@ function drawScore() {
 }
 
         function moveRocket() {
-            if (keys.ArrowLeft && rocket.x > 0) {
-                rocket.x -= rocket.speed;
-            }
-            if (keys.ArrowRight && rocket.x < canvas.width - rocket.width) {
-                rocket.x += rocket.speed;
-            }
+                    let moving = false;
+                    if (keys.ArrowLeft && rocket.x > 0) {
+                        rocket.x -= rocket.speed;
+                        moving = true;
+                    }
+                    if (keys.ArrowRight && rocket.x < canvas.width - rocket.width) {
+                        rocket.x += rocket.speed;
+                        moving = true;
+                    }
+                    if (moving) {
+                        safePlay(rocketThrust, false);
+                    } else {
+                        try { rocketThrust.pause(); rocketThrust.currentTime = 0; } catch(e) {}
+                    }
         }
 
         const keys = {};
@@ -351,6 +428,10 @@ function spawnMassiveMeteor() {
     massiveMeteorActive = true;
     // Pause regular meteor spawning while the massive meteor is active
     try { if (spawnTimer) { clearInterval(spawnTimer); spawnTimer = null; } } catch (e) {}
+    // Start the massive-meteor thrust loop sound
+    try { safePlay(rocketThrustLoop); } catch (e) {}
+    // Stop the regular short thrust sound if playing
+    try { rocketThrust.pause(); rocketThrust.currentTime = 0; } catch (e) {}
 }
 
 function drawMassiveMeteor() {
@@ -402,6 +483,7 @@ function shootLaser() {
             height: 20,
             speed: 35 // Increased speed
         };
+        safePlay(laserSound);
     }
 }
 
@@ -451,7 +533,12 @@ function updateLaser() {
                     if (!spawnTimer) spawnTimer = setInterval(spawnMeteor, spawnInterval);
                 }, 50);
 
+                // Play big meteor explosion and stop massive thrust loop
+                safePlay(bigMeteorBlowUp);
+                try { rocketThrustLoop.pause(); rocketThrustLoop.currentTime = 0; } catch(e) {}
+
                 score += 25; // Award 25 points for destroying the massive meteor
+                checkWin();
             }
         }
 
@@ -468,7 +555,9 @@ function updateLaser() {
                 laser.y + laser.height > meteor.y
             ) {
                 meteors.splice(i, 1); // Remove the meteor
-                score += 1; // Award a point for destroying the meteor
+                score += 2; // Award 2 points for destroying a regular meteor with a laser
+                checkWin();
+                safePlay(meteorBlowUp);
                 laser = null; // Remove the laser after a hit
                 break; // Exit the loop after a hit
             }
